@@ -7,16 +7,15 @@
 #include <algorithm>
 #include <cstdio>
 #include <memory>
+#include <ostream>
 #include <random>
 #include <set>
 #include <thread>  // NOLINT
 #include <vector>
-
 #include "gtest/gtest.h"
 
 namespace bustub {
-
-TEST(LRUKReplacerTest, DISABLED_SampleTest) {
+TEST(LRUKReplacerTest, SampleTest) {
   // Note that comparison with `std::nullopt` always results in `false`, and if the optional type actually does contain
   // a value, the comparison will compare the inner value.
   // See: https://devblogs.microsoft.com/oldnewthing/20211004-00/?p=105754
@@ -32,11 +31,7 @@ TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   lru_replacer.RecordAccess(4);
   lru_replacer.RecordAccess(5);
   lru_replacer.RecordAccess(6);
-  lru_replacer.SetEvictable(1, true);
-  lru_replacer.SetEvictable(2, true);
-  lru_replacer.SetEvictable(3, true);
-  lru_replacer.SetEvictable(4, true);
-  lru_replacer.SetEvictable(5, true);
+
   lru_replacer.SetEvictable(6, false);
 
   // The size of the replacer is the number of frames that can be evicted, _not_ the total number of frames entered.

@@ -30,7 +30,6 @@ class LRUKNode {
  public:
   // 构造函数
   LRUKNode(frame_id_t id, size_t time) : frame_id(id), init_timestamp(time), last_visit_timestamp(time) {}
-
   size_t access_time{1};
   frame_id_t frame_id;
   size_t init_timestamp;
@@ -154,9 +153,9 @@ class LRUKReplacer {
   size_t replacer_size_;
   std::mutex latch_;
   // 没访问k次放这里
-  std::unordered_map<frame_id_t, LRUKNode> not_k_map;
+  std::unordered_map<frame_id_t, LRUKNode> not_k_map_;
   // 访问了k次放这里
-  std::unordered_map<frame_id_t, LRUKNode> k_map;
+  std::unordered_map<frame_id_t, LRUKNode> k_map_;
   size_t current_timestamp_{0};
 };
 
