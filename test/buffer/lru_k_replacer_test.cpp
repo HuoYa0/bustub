@@ -32,6 +32,12 @@ TEST(LRUKReplacerTest, SampleTest) {
   lru_replacer.RecordAccess(5);
   lru_replacer.RecordAccess(6);
 
+
+  lru_replacer.SetEvictable(1, true);
+  lru_replacer.SetEvictable(2, true);
+  lru_replacer.SetEvictable(3, true);
+  lru_replacer.SetEvictable(4, true);
+  lru_replacer.SetEvictable(5, true);
   lru_replacer.SetEvictable(6, false);
 
   // The size of the replacer is the number of frames that can be evicted, _not_ the total number of frames entered.
@@ -81,6 +87,7 @@ TEST(LRUKReplacerTest, SampleTest) {
   lru_replacer.RecordAccess(1);
   lru_replacer.RecordAccess(1);
   lru_replacer.SetEvictable(1, true);
+  lru_replacer.Size();
   ASSERT_EQ(2, lru_replacer.Size());
 
   // Evict the last two frames.

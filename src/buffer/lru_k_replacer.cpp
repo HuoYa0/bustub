@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "buffer/lru_k_replacer.h"
+#include <iostream>
 #include "common/exception.h"
 namespace bustub {
 
@@ -18,6 +19,7 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : k_(k), replacer_size_(
 
 // 从内存中淘汰某个帧
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
+  this->current_timestamp_++;
   std::lock_guard<std::mutex> lock(latch_);
   bustub::LRUKNode *target_node = nullptr;
   size_t max_time = this->current_timestamp_;
@@ -26,7 +28,7 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
     if (!pair.second.evictable) {
       continue;
     }
-    if (pair.second.init_timestamp < max_time) {
+    if (pair.second.init_timestamp <= max_time) {
       target_node = const_cast<bustub::LRUKNode *>(&pair.second);
       max_time = pair.second.init_timestamp;
     }
@@ -34,18 +36,23 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
   if (target_node != nullptr) {
     frame_id_t id = target_node->frame_id;
     this->not_k_map_.erase(id);
+    // std::cout<<"not_k_map_ size: "<<this->not_k_map_.size()<<std::endl;
     return id;
   }
-  // 遍历k_map找最早进入的node进行返回
+  // 遍历k_map找最晚访问进入的node进行返回
   for (const auto &pair : this->k_map_) {
-    if (pair.second.init_timestamp < max_time) {
+    if (!pair.second.evictable) {
+      continue;
+    }
+    if (pair.second.last_visit_timestamp < max_time) {
       target_node = const_cast<bustub::LRUKNode *>(&pair.second);
-      max_time = pair.second.init_timestamp;
+      max_time = pair.second.last_visit_timestamp;
     }
   }
   if (target_node != nullptr) {
     frame_id_t id = target_node->frame_id;
     this->k_map_.erase(id);
+    // std::cout<<"k_map_ size: "<<this->k_map_.size()<<std::endl;
     return id;
   }
   // not_k_map_和k_map都为空 返回null
@@ -54,6 +61,9 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
 
 // 通过frame_id访问某个帧，并进行记录。frame_id为新时需要创建新node
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
+        // std::cout<<"begin:"<<frame_id<<std::endl;
+        // std::cout<<"not_k_map_ size: "<<this->not_k_map_.size()<<std::endl;
+        // std::cout<<"k_map_ size:"<<this->k_map_.size()<<std::endl;
   std::lock_guard<std::mutex> lock(latch_);
   this->current_timestamp_++;
   // If frame id is invalid  throw an exception.
@@ -62,15 +72,14 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
   }
   // 在k_map中
   if (this->k_map_.find(frame_id) != this->k_map_.end()) {
-    bustub::LRUKNode node = this->k_map_.find(frame_id)->second;
-    node.last_visit_timestamp = this->current_timestamp_;
-    node.access_time++;
+    this->k_map_[frame_id].last_visit_timestamp = this->current_timestamp_;
+    this->k_map_[frame_id].access_time++;
   } else if (this->not_k_map_.find(frame_id) != this->not_k_map_.end()) {
     // 在not_k_map_中
-    bustub::LRUKNode node = this->not_k_map_.find(frame_id)->second;
-    node.last_visit_timestamp = this->current_timestamp_;
-    node.access_time++;
-    if (node.access_time >= this->k_) {
+    this->not_k_map_[frame_id].last_visit_timestamp = this->current_timestamp_;
+    this->not_k_map_[frame_id].access_time++;
+    if (this->not_k_map_[frame_id].access_time >= this->k_) {
+      LRUKNode node = this->not_k_map_[frame_id];
       this->k_map_.insert({frame_id, node});
       this->not_k_map_.erase(frame_id);
     }
@@ -79,7 +88,14 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
   else if (TotalSize() >= this->replacer_size_) {
     Evict();
   }
-  this->not_k_map_.insert({frame_id, LRUKNode(frame_id, this->current_timestamp_)});
+  else {
+    this->not_k_map_.insert({frame_id, LRUKNode(frame_id, this->current_timestamp_)});
+  }
+        // std::cout<<"end"<<std::endl;
+        // std::cout<<"not_k_map_ size: "<<this->not_k_map_.size()<<std::endl;
+        // std::cout<<"k_map_ size: "<<this->k_map_.size()<<std::endl;
+        // std::cout<<"----------"<<std::endl;
+
 }
 
 // 将一个帧设置为指定的evictable，即pin住
@@ -89,11 +105,9 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     throw -1;
   }
   if (this->k_map_.find(frame_id) != this->k_map_.end()) {
-    bustub::LRUKNode node = this->k_map_.find(frame_id)->second;
-    node.evictable = set_evictable;
+     this->k_map_[frame_id].evictable=set_evictable;
   } else if (this->not_k_map_.find(frame_id) != this->not_k_map_.end()) {
-    bustub::LRUKNode node = this->not_k_map_.find(frame_id)->second;
-    node.evictable = set_evictable;
+    this->not_k_map_[frame_id].evictable=set_evictable;
   }
 }
 

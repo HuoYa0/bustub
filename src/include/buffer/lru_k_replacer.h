@@ -29,7 +29,7 @@ enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 class LRUKNode {
  public:
   // 构造函数
-  LRUKNode(frame_id_t id, size_t time) : frame_id(id), init_timestamp(time), last_visit_timestamp(time) {}
+  explicit LRUKNode(frame_id_t id=0, size_t time=0) : frame_id(id), init_timestamp(time), last_visit_timestamp(time) {}
   size_t access_time{1};
   frame_id_t frame_id;
   size_t init_timestamp;

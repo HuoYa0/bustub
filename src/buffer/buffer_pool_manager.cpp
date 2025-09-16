@@ -112,8 +112,6 @@ auto BufferPoolManager::Size() const -> size_t { return num_frames_; }
  * You will maintain a thread-safe, monotonically increasing counter in the form of a `std::atomic<page_id_t>`.
  * See the documentation on [atomics](https://en.cppreference.com/w/cpp/atomic/atomic) for more information.
  *
- * Also, make sure to read the documentation for `DeletePage`! You can assume that you will never run out of disk
- * space (via `DiskScheduler::IncreaseDiskSpace`), so this function _cannot_ fail.
  *
  * Once you have allocated the new page via the counter, make sure to call `DiskScheduler::IncreaseDiskSpace` so you
  * have enough space on disk!
@@ -122,7 +120,12 @@ auto BufferPoolManager::Size() const -> size_t { return num_frames_; }
  *
  * @return The page ID of the newly allocated page.
  */
-auto BufferPoolManager::NewPage() -> page_id_t { UNIMPLEMENTED("TODO(P1): Add implementation."); }
+auto BufferPoolManager::NewPage() -> page_id_t {
+  std::scoped_lock lock(bpm_latch_);
+  disk_scheduler_->IncreaseDiskSpace(1);
+  next_page_id_++;
+  return next_page_id_;
+}
 
 /**
  * @brief Removes a page from the database, both on disk and in memory.
@@ -135,12 +138,7 @@ auto BufferPoolManager::NewPage() -> page_id_t { UNIMPLEMENTED("TODO(P1): Add im
  * Think about all of the places a page or a page's metadata could be, and use that to guide you on implementing this
  * function. You will probably want to implement this function _after_ you have implemented `CheckedReadPage` and
  * `CheckedWritePage`.
- *
- * Ideally, we would want to ensure that all space on disk is used efficiently. That would mean the space that deleted
- * pages on disk used to occupy should somehow be made available to new pages allocated by `NewPage`.
- *
- * If you would like to attempt this, you are free to do so. However, for this implementation, you are allowed to
- * assume you will not run out of disk space and simply keep allocating disk space upwards in `NewPage`.
+ *  you will not run out of disk space and simply keep allocating disk space upwards in `NewPage`.
  *
  * For (nonexistent) style points, you can still call `DeallocatePage` in case you want to implement something slightly
  * more space-efficient in the future.
@@ -150,7 +148,22 @@ auto BufferPoolManager::NewPage() -> page_id_t { UNIMPLEMENTED("TODO(P1): Add im
  * @param page_id The page ID of the page we want to delete.
  * @return `false` if the page exists but could not be deleted, `true` if the page didn't exist or deletion succeeded.
  */
-auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool { UNIMPLEMENTED("TODO(P1): Add implementation."); }
+auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
+  auto frame_id = page_table_.find(page_id);
+  // 没在buffer pool
+  if (frame_id == page_table_.end()) {
+    disk_scheduler_->DeallocatePage(page_id);
+    return true;
+  }
+  try {
+    replacer_->Remove(page_id);
+  } catch (...) {
+    // 被pin了
+    return false;
+  }
+  disk_scheduler_->DeallocatePage(page_id);
+  return true;
+}
 
 /**
  * @brief Acquires an optional write-locked guard over a page of data. The user can specify an `AccessType` if needed.
@@ -289,7 +302,24 @@ auto BufferPoolManager::ReadPage(page_id_t page_id, AccessType access_type) -> R
  * @param page_id The page ID of the page to be flushed.
  * @return `false` if the page could not be found in the page table, otherwise `true`.
  */
-auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool { UNIMPLEMENTED("TODO(P1): Add implementation."); }
+auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
+  std::scoped_lock lock(bpm_latch_);
+  // 如果映射里没有
+  if (page_table_.find(page_id) == page_table_.end()) {
+    return false;
+  }
+  auto target_frame_header = frames_[page_table_[page_id]];
+  // 不是脏帧 直接返回
+  if (!target_frame_header->is_dirty_) {
+    return true;
+  }
+  // 写回，这里creatpromise方法返回了一个std::promise对象
+  disk_scheduler_->Schedule(
+      {true, target_frame_header->GetDataMut(), target_frame_header->frame_id_, disk_scheduler_->CreatePromise()});
+  // 赃位恢复
+  target_frame_header->is_dirty_ = false;
+  return true;
+}
 
 /**
  * @brief Flushes all page data that is in memory to disk.
@@ -301,7 +331,11 @@ auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool { UNIMPLEMENTED("TO
  *
  * TODO(P1): Add implementation
  */
-void BufferPoolManager::FlushAllPages() { UNIMPLEMENTED("TODO(P1): Add implementation."); }
+void BufferPoolManager::FlushAllPages() { 
+      for (auto & it : page_table_) {
+        FlushPage(it.second);
+    }
+}
 
 /**
  * @brief Retrieves the pin count of a page. If the page does not exist in memory, return `std::nullopt`.
@@ -328,7 +362,15 @@ void BufferPoolManager::FlushAllPages() { UNIMPLEMENTED("TODO(P1): Add implement
  * @return std::optional<size_t> The pin count if the page exists, otherwise `std::nullopt`.
  */
 auto BufferPoolManager::GetPinCount(page_id_t page_id) -> std::optional<size_t> {
-  UNIMPLEMENTED("TODO(P1): Add implementation.");
+  std::scoped_lock lock(bpm_latch_);
+  auto it = page_table_.find(page_id);
+  // 没在buffer pool
+  if (it == page_table_.end()) {
+    return std::nullopt;
+  }
+  frame_id_t frame_id = it->second;
+  std::shared_ptr<FrameHeader> target_frame = frames_[frame_id];
+  return target_frame->pin_count_.load();
 }
 
 }  // namespace bustub
