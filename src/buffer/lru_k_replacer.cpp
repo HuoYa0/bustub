@@ -25,32 +25,32 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
   size_t max_time = this->current_timestamp_;
   // 遍历not_k_map_找最早进入的node进行返回
   for (const auto &pair : this->not_k_map_) {
-    if (!pair.second.evictable) {
+    if (!pair.second.evictable_) {
       continue;
     }
-    if (pair.second.init_timestamp <= max_time) {
+    if (pair.second.init_timestamp_ <= max_time) {
       target_node = const_cast<bustub::LRUKNode *>(&pair.second);
-      max_time = pair.second.init_timestamp;
+      max_time = pair.second.init_timestamp_;
     }
   }
   if (target_node != nullptr) {
-    frame_id_t id = target_node->frame_id;
+    frame_id_t id = target_node->frame_id_;
     this->not_k_map_.erase(id);
     // std::cout<<"not_k_map_ size: "<<this->not_k_map_.size()<<std::endl;
     return id;
   }
   // 遍历k_map找最晚访问进入的node进行返回
   for (const auto &pair : this->k_map_) {
-    if (!pair.second.evictable) {
+    if (!pair.second.evictable_) {
       continue;
     }
-    if (pair.second.last_visit_timestamp < max_time) {
+    if (pair.second.last_visit_timestamp_ < max_time) {
       target_node = const_cast<bustub::LRUKNode *>(&pair.second);
-      max_time = pair.second.last_visit_timestamp;
+      max_time = pair.second.last_visit_timestamp_;
     }
   }
   if (target_node != nullptr) {
-    frame_id_t id = target_node->frame_id;
+    frame_id_t id = target_node->frame_id_;
     this->k_map_.erase(id);
     // std::cout<<"k_map_ size: "<<this->k_map_.size()<<std::endl;
     return id;
@@ -72,13 +72,13 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
   }
   // 在k_map中
   if (this->k_map_.find(frame_id) != this->k_map_.end()) {
-    this->k_map_[frame_id].last_visit_timestamp = this->current_timestamp_;
-    this->k_map_[frame_id].access_time++;
+    this->k_map_[frame_id].last_visit_timestamp_ = this->current_timestamp_;
+    this->k_map_[frame_id].access_time_++;
   } else if (this->not_k_map_.find(frame_id) != this->not_k_map_.end()) {
     // 在not_k_map_中
-    this->not_k_map_[frame_id].last_visit_timestamp = this->current_timestamp_;
-    this->not_k_map_[frame_id].access_time++;
-    if (this->not_k_map_[frame_id].access_time >= this->k_) {
+    this->not_k_map_[frame_id].last_visit_timestamp_ = this->current_timestamp_;
+    this->not_k_map_[frame_id].access_time_++;
+    if (this->not_k_map_[frame_id].access_time_ >= this->k_) {
       LRUKNode node = this->not_k_map_[frame_id];
       this->k_map_.insert({frame_id, node});
       this->not_k_map_.erase(frame_id);
@@ -105,9 +105,9 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
     throw -1;
   }
   if (this->k_map_.find(frame_id) != this->k_map_.end()) {
-     this->k_map_[frame_id].evictable=set_evictable;
+     this->k_map_[frame_id].evictable_=set_evictable;
   } else if (this->not_k_map_.find(frame_id) != this->not_k_map_.end()) {
-    this->not_k_map_[frame_id].evictable=set_evictable;
+    this->not_k_map_[frame_id].evictable_=set_evictable;
   }
 }
 
@@ -119,13 +119,13 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
   }
   if (this->k_map_.find(frame_id) != this->k_map_.end()) {
     auto node = this->k_map_.find(frame_id)->second;
-    if (!node.evictable) {
+    if (!node.evictable_) {
       throw -1;
     }
     this->k_map_.erase(frame_id);
   } else if (this->not_k_map_.find(frame_id) != this->not_k_map_.end()) {
     auto node = this->not_k_map_.find(frame_id)->second;
-    if (!node.evictable) {
+    if (!node.evictable_) {
       throw -1;
     }
     this->not_k_map_.erase(frame_id);
@@ -136,12 +136,12 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
 auto LRUKReplacer::Size() -> size_t {
   int size = 0;
   for (const auto &pair : this->not_k_map_) {
-    if (pair.second.evictable) {
+    if (pair.second.evictable_) {
       size++;
     }
   }
   for (const auto &pair : this->k_map_) {
-    if (pair.second.evictable) {
+    if (pair.second.evictable_) {
       size++;
     }
   }

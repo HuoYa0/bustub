@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "buffer/buffer_pool_manager.h"
+#include <mutex>
 
 namespace bustub {
 
@@ -121,7 +122,7 @@ auto BufferPoolManager::Size() const -> size_t { return num_frames_; }
  * @return The page ID of the newly allocated page.
  */
 auto BufferPoolManager::NewPage() -> page_id_t {
-  std::scoped_lock lock(bpm_latch_);
+  std::scoped_lock<std::mutex> lock(*bpm_latch_);
   disk_scheduler_->IncreaseDiskSpace(1);
   next_page_id_++;
   return next_page_id_;
@@ -303,7 +304,7 @@ auto BufferPoolManager::ReadPage(page_id_t page_id, AccessType access_type) -> R
  * @return `false` if the page could not be found in the page table, otherwise `true`.
  */
 auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
-  std::scoped_lock lock(bpm_latch_);
+  std::scoped_lock<std::mutex> lock(*bpm_latch_);
   // 如果映射里没有
   if (page_table_.find(page_id) == page_table_.end()) {
     return false;
@@ -362,7 +363,7 @@ void BufferPoolManager::FlushAllPages() {
  * @return std::optional<size_t> The pin count if the page exists, otherwise `std::nullopt`.
  */
 auto BufferPoolManager::GetPinCount(page_id_t page_id) -> std::optional<size_t> {
-  std::scoped_lock lock(bpm_latch_);
+  std::scoped_lock<std::mutex> lock(*bpm_latch_);
   auto it = page_table_.find(page_id);
   // 没在buffer pool
   if (it == page_table_.end()) {

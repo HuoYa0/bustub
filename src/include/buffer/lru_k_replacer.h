@@ -29,12 +29,12 @@ enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 class LRUKNode {
  public:
   // 构造函数
-  explicit LRUKNode(frame_id_t id=0, size_t time=0) : frame_id(id), init_timestamp(time), last_visit_timestamp(time) {}
-  size_t access_time{1};
-  frame_id_t frame_id;
-  size_t init_timestamp;
-  size_t last_visit_timestamp;
-  bool evictable{true};
+  explicit LRUKNode(frame_id_t id=0, size_t time=0) : frame_id_(id), init_timestamp_(time), last_visit_timestamp_(time) {}
+  size_t access_time_{1};
+  frame_id_t frame_id_;        
+  size_t init_timestamp_;
+  size_t last_visit_timestamp_;
+  bool evictable_{true};
 };
 
 /**
