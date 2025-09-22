@@ -66,7 +66,7 @@ class ReadPageGuard {
  private:
   /** @brief Only the buffer pool manager is allowed to construct a valid `ReadPageGuard.` */
   explicit ReadPageGuard(page_id_t page_id, std::shared_ptr<FrameHeader> frame, std::shared_ptr<LRUKReplacer> replacer,
-                         std::shared_ptr<std::mutex> bpm_latch);
+                          std::shared_ptr<std::mutex> bpm_latch);
 
   /** @brief The page ID of the page we are guarding. */
   page_id_t page_id_;
@@ -120,27 +120,15 @@ class ReadPageGuard {
  * The _only_ way that the BusTub system should interact with the buffer pool's page data is via page guards. Since
  * `WritePageGuard` is an RAII object, the system never has to manually lock and unlock a page's latch.
  *
- * With a `WritePageGuard`, there can be only be 1 thread that has exclusive ownership over the page's data. This means
- * that the owner of the `WritePageGuard` can mutate the page's data as much as they want. However, the existence of a
- * `WritePageGuard` implies that no other `WritePageGuard` or any `ReadPageGuard`s for the same page can exist at the
+ * With a `WritePageGuard`, there can be only be 1 thread that has exclusive ownership over the page's data.
+    the existence of a `WritePageGuard` implies that no other `WritePageGuard` or `ReadPageGuard`s for the same page can
+ exist at the
  * same time.
  */
 class WritePageGuard {
-  /** @brief Only the buffer pool manager is allowed to construct a valid `WritePageGuard.` */
   friend class BufferPoolManager;
 
  public:
-  /**
-   * @brief The default constructor for a `WritePageGuard`.
-   *
-   * Note that we do not EVER want use a guard that has only been default constructed. The only reason we even define
-   * this default constructor is to enable placing an "uninitialized" guard on the stack that we can later move assign
-   * via `=`.
-   *
-   * **Use of an uninitialized page guard is undefined behavior.**
-   *
-   * In other words, the only way to get a valid `WritePageGuard` is through the buffer pool manager.
-   */
   WritePageGuard() = default;
 
   WritePageGuard(const WritePageGuard &) = delete;
@@ -167,7 +155,6 @@ class WritePageGuard {
   explicit WritePageGuard(page_id_t page_id, std::shared_ptr<FrameHeader> frame, std::shared_ptr<LRUKReplacer> replacer,
                           std::shared_ptr<std::mutex> bpm_latch);
 
-  /** @brief The page ID of the page we are guarding. */
   page_id_t page_id_;
 
   /**
@@ -191,8 +178,8 @@ class WritePageGuard {
    * Since the buffer pool cannot know when this `WritePageGuard` gets destructed, we maintain a pointer to the buffer
    * pool's latch for when we need to update the frame's eviction state in the buffer pool replacer.
    */
-  std::shared_ptr<std::mutex> bpm_latch_;
 
+  std::shared_ptr<std::mutex> bpm_latch_;
   /**
    * @brief The validity flag for this `WritePageGuard`.
    *

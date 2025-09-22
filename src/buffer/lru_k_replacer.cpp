@@ -20,7 +20,7 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : k_(k), replacer_size_(
 // 从内存中淘汰某个帧
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
   this->current_timestamp_++;
-  std::lock_guard<std::mutex> lock(latch_);
+  // std::lock_guard<std::mutex> lock(latch_);
   bustub::LRUKNode *target_node = nullptr;
   size_t max_time = this->current_timestamp_;
   // 遍历not_k_map_找最早进入的node进行返回
@@ -64,7 +64,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
         // std::cout<<"begin:"<<frame_id<<std::endl;
         // std::cout<<"not_k_map_ size: "<<this->not_k_map_.size()<<std::endl;
         // std::cout<<"k_map_ size:"<<this->k_map_.size()<<std::endl;
-  std::lock_guard<std::mutex> lock(latch_);
+  // std::lock_guard<std::mutex> lock(latch_);
   this->current_timestamp_++;
   // If frame id is invalid  throw an exception.
   if (static_cast<size_t>(frame_id) >= this->replacer_size_ || frame_id < 0) {
@@ -100,7 +100,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
 
 // 将一个帧设置为指定的evictable，即pin住
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
-  std::lock_guard<std::mutex> lock(latch_);
+  // std::lock_guard<std::mutex> lock(latch_);
   if (static_cast<size_t>(frame_id) >= this->replacer_size_ || frame_id < 0) {
     throw -1;
   }
@@ -113,7 +113,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
 
 // 删除指定frame，但它得是能删的
 void LRUKReplacer::Remove(frame_id_t frame_id) {
-  std::lock_guard<std::mutex> lock(latch_);
+  // std::lock_guard<std::mutex> lock(latch_);
   if (static_cast<size_t>(frame_id) >= this->replacer_size_ || frame_id < 0) {
     throw -1;
   }
