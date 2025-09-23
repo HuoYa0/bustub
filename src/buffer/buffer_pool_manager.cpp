@@ -21,13 +21,11 @@
 namespace bustub {
 
 // 通过value查找key，删除并返回key
-auto EraseMapByValue(std::unordered_map<page_id_t, frame_id_t> &map, const frame_id_t &targetValue)
+auto GetKeyMapByValue(std::unordered_map<page_id_t, frame_id_t> &map, const frame_id_t &targetValue)
     -> std::optional<page_id_t> {
-  for (auto it = map.begin(); it != map.end(); ++it) {
-    if (it->second == targetValue) {
-      auto key = it->first;
-      map.erase(it->first);
-      return key;
+  for (auto &it : map) {
+    if (it.second == targetValue) {
+      return it.first;
     }
   }
   return std::nullopt;
@@ -248,22 +246,23 @@ auto BufferPoolManager::CheckedWritePage(page_id_t page_id, [[maybe_unused]] Acc
         return std::nullopt;
       }
       target_frame_header = frames_[target_frame_id.value()];
-      std::optional<page_id_t> evict_page_id = bustub::EraseMapByValue(page_table_, target_frame_id.value());
+      std::optional<page_id_t> evict_page_id = bustub::GetKeyMapByValue(page_table_, target_frame_id.value());
       if (evict_page_id.has_value()) {
         // 置换frame的写回操作
+        std::cout << "Evict frame_id: " << target_frame_id.value() << ",evict_page_id:" << evict_page_id.value()
+                  << " ,this_page_id: " << page_id << std::endl;
         FlushPage(evict_page_id.value());
         target_frame_header->Reset();
+        page_table_.erase(evict_page_id.value());
         page_table_[page_id] = target_frame_id.value();
       }
     }
     // 目标不在frames中，需要额外的IO操作，从磁盘读入数据
     auto promise = disk_scheduler_->CreatePromise();
     auto future = promise.get_future();
-    disk_scheduler_->Schedule(
-        {true /*Write*/, frames_[target_frame_id.value()]->data_.data(), page_id, std::move(promise)});
+    disk_scheduler_->Schedule({false, target_frame_header->GetDataMut(), page_id, std::move(promise)});
     if (future.get()) {
-      std::cout << "从磁盘写入page: " << page_id << "的数据: " << frames_[target_frame_id.value()]->data_.data()
-                << std::endl;
+      std::cout << "从磁盘读入page: " << page_id << "的数据: " << target_frame_header->GetDataMut() << std::endl;
     }
   }
   replacer_->RecordAccess(target_frame_id.value());
@@ -299,7 +298,6 @@ auto BufferPoolManager::CheckedReadPage(page_id_t page_id, [[maybe_unused]] Acce
   std::unique_lock lock(*bpm_latch_);
   std::optional<frame_id_t> target_frame_id;
   std::shared_ptr<FrameHeader> target_frame_header;
-
   // 目标正在frames中
   if (page_table_.find(page_id) != page_table_.end()) {
     target_frame_id = page_table_[page_id];
@@ -319,22 +317,23 @@ auto BufferPoolManager::CheckedReadPage(page_id_t page_id, [[maybe_unused]] Acce
         return std::nullopt;
       }
       target_frame_header = frames_[target_frame_id.value()];
-      std::optional<page_id_t> evict_page_id = bustub::EraseMapByValue(page_table_, target_frame_id.value());
+      std::optional<page_id_t> evict_page_id = bustub::GetKeyMapByValue(page_table_, target_frame_id.value());
       if (evict_page_id.has_value()) {
         // 置换frame的写回操作
+       std::cout << "Evict frame_id: " << target_frame_id.value() << ",evict_page_id:" << evict_page_id.value()
+                  << " ,this_page_id: " << page_id << std::endl;
         FlushPage(evict_page_id.value());
         target_frame_header->Reset();
+        page_table_.erase(evict_page_id.value());
         page_table_[page_id] = target_frame_id.value();
       }
     }
     // 目标不在frames中，需要额外的IO操作，从磁盘读入数据
     auto promise = disk_scheduler_->CreatePromise();
     auto future = promise.get_future();
-    disk_scheduler_->Schedule(
-        {false /*Read*/, frames_[target_frame_id.value()]->data_.data(), page_id, std::move(promise)});
+    disk_scheduler_->Schedule({false, target_frame_header->GetDataMut(), page_id, std::move(promise)});
     if (future.get()) {
-      std::cout << "从磁盘读入page: " << page_id << "的数据: " << frames_[target_frame_id.value()]->data_.data()
-                << std::endl;
+      std::cout << "从磁盘读入page: " << page_id << "的数据: " << target_frame_header->GetDataMut() << std::endl;
     }
   }
   replacer_->RecordAccess(target_frame_id.value());
@@ -405,14 +404,17 @@ auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   // 如果映射里没有
   auto it = page_table_.find(page_id);
   if (it == page_table_.end()) {
+    std::cout << "no match page " << page_id << std::endl;
     return false;
   }
   frame_id_t frame_id = it->second;
   std::shared_ptr<FrameHeader> target_frame_header = frames_[frame_id];
   // 不是脏帧 直接返回
   if (!target_frame_header->is_dirty_) {
+    std::cout << "FlushPage_not_dirty_id " << page_id << std::endl;
     return true;
   }
+  std::cout << "FlushPage_dirty_id " << page_id << std::endl;
   auto promise = disk_scheduler_->CreatePromise();
   auto future = promise.get_future();
   // 写回，这里creatpromise方法返回了一个std::promise对象

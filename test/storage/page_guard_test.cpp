@@ -46,7 +46,6 @@ TEST(PageGuardTest, DropTest) {
   //   ASSERT_EQ(0, bpm->GetPinCount(pid0));
   // }  // Destructor should be called. Useless but should not cause issues.
 
-
   // auto pid1 = bpm->NewPage();
   // auto pid2 = bpm->NewPage();
   // {
