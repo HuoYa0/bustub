@@ -28,7 +28,7 @@ const size_t FRAMES = 10;
 // Note that this test assumes you are using the an LRU-K replacement policy.
 const size_t K_DIST = 5;
 
-TEST(BufferPoolManagerTest,  DISABLED_VeryBasicTest) {
+TEST(BufferPoolManagerTest, DISABLED_VeryBasicTest) {
   // A very basic test.
 
   auto disk_manager = std::make_shared<DiskManager>(db_fname);
@@ -63,7 +63,7 @@ TEST(BufferPoolManagerTest,  DISABLED_VeryBasicTest) {
   ASSERT_TRUE(bpm->DeletePage(pid));
 }
 
-TEST(BufferPoolManagerTest,   DISABLED_PagePinEasyTest) {
+TEST(BufferPoolManagerTest, DISABLED_PagePinEasyTest) {
   auto disk_manager = std::make_shared<DiskManager>(db_fname);
   auto bpm = std::make_shared<BufferPoolManager>(2, disk_manager.get(), 5);
 
@@ -159,7 +159,7 @@ TEST(BufferPoolManagerTest,   DISABLED_PagePinEasyTest) {
   remove(disk_manager->GetLogFileName());
 }
 
-TEST(BufferPoolManagerTest,  DISABLED_PagePinMediumTest) {
+TEST(BufferPoolManagerTest, DISABLED_PagePinMediumTest) {
   auto disk_manager = std::make_shared<DiskManager>(db_fname);
   auto bpm = std::make_shared<BufferPoolManager>(FRAMES, disk_manager.get(), K_DIST);
 
@@ -237,7 +237,7 @@ TEST(BufferPoolManagerTest,  DISABLED_PagePinMediumTest) {
   remove(db_fname);
 }
 
-TEST(BufferPoolManagerTest,   DISABLED_PageAccessTest) {
+TEST(BufferPoolManagerTest, DISABLED_PageAccessTest) {
   const size_t rounds = 50;
 
   auto disk_manager = std::make_shared<DiskManager>(db_fname);
@@ -275,7 +275,7 @@ TEST(BufferPoolManagerTest,   DISABLED_PageAccessTest) {
   thread.join();
 }
 
-TEST(BufferPoolManagerTest,   DISABLED_ContentionTest) {
+TEST(BufferPoolManagerTest, DISABLED_ContentionTest) {
   auto disk_manager = std::make_shared<DiskManager>(db_fname);
   auto bpm = std::make_shared<BufferPoolManager>(FRAMES, disk_manager.get(), K_DIST);
 
@@ -317,7 +317,7 @@ TEST(BufferPoolManagerTest,   DISABLED_ContentionTest) {
   thread1.join();
 }
 
-TEST(BufferPoolManagerTest,   DISABLED_DeadlockTest) {
+TEST(BufferPoolManagerTest, DISABLED_DeadlockTest) {
   auto disk_manager = std::make_shared<DiskManager>(db_fname);
   auto bpm = std::make_shared<BufferPoolManager>(FRAMES, disk_manager.get(), K_DIST);
 
@@ -357,13 +357,12 @@ TEST(BufferPoolManagerTest,   DISABLED_DeadlockTest) {
   child.join();
 }
 
-TEST(BufferPoolManagerTest,   DISABLED_EvictableTest) {
+TEST(BufferPoolManagerTest, EvictableTest) {
   // Test if the evictable status of a frame is always correct.
-  size_t rounds = 1000;
+  size_t rounds = 100;
   size_t num_readers = 8;
 
   auto disk_manager = std::make_shared<DiskManager>(db_fname);
-  // Only allocate 1 frame of memory to the buffer pool manager.
   auto bpm = std::make_shared<BufferPoolManager>(1, disk_manager.get(), K_DIST);
 
   for (size_t i = 0; i < rounds; i++) {

@@ -266,8 +266,9 @@ auto BufferPoolManager::CheckedWritePage(page_id_t page_id, [[maybe_unused]] Acc
     }
   }
   replacer_->RecordAccess(target_frame_id.value());
-  target_frame_header->pin_count_++;
+  // target_frame_header->pin_count_++;
   replacer_->SetEvictable(target_frame_id.value(), false);
+  lock.unlock();
   return WritePageGuard(page_id, target_frame_header, replacer_, bpm_latch_);
 }
 
@@ -320,7 +321,7 @@ auto BufferPoolManager::CheckedReadPage(page_id_t page_id, [[maybe_unused]] Acce
       std::optional<page_id_t> evict_page_id = bustub::GetKeyMapByValue(page_table_, target_frame_id.value());
       if (evict_page_id.has_value()) {
         // 置换frame的写回操作
-       std::cout << "Evict frame_id: " << target_frame_id.value() << ",evict_page_id:" << evict_page_id.value()
+        std::cout << "Evict frame_id: " << target_frame_id.value() << ",evict_page_id:" << evict_page_id.value()
                   << " ,this_page_id: " << page_id << std::endl;
         FlushPage(evict_page_id.value());
         target_frame_header->Reset();
@@ -337,8 +338,9 @@ auto BufferPoolManager::CheckedReadPage(page_id_t page_id, [[maybe_unused]] Acce
     }
   }
   replacer_->RecordAccess(target_frame_id.value());
-  target_frame_header->pin_count_++;
+  // target_frame_header->pin_count_++;
   replacer_->SetEvictable(target_frame_id.value(), false);
+  lock.unlock();
   return ReadPageGuard(page_id, target_frame_header, replacer_, bpm_latch_);
 }
 
@@ -354,7 +356,6 @@ auto BufferPoolManager::WritePage(page_id_t page_id, [[maybe_unused]] AccessType
     fmt::println(stderr, "\n`CheckedWritePage` failed to bring in page {}\n", page_id);
     std::abort();
   }
-
   return std::move(guard_opt).value();
 }
 

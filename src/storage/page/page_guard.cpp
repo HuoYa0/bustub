@@ -30,11 +30,14 @@ namespace bustub {
 ReadPageGuard::ReadPageGuard(page_id_t page_id, std::shared_ptr<FrameHeader> frame,
                              std::shared_ptr<LRUKReplacer> replacer, std::shared_ptr<std::mutex> bpm_latch)
     : page_id_(page_id), frame_(std::move(frame)), replacer_(std::move(replacer)), bpm_latch_(std::move(bpm_latch)) {
-  std::cout << "read: frame_id:" <<frame_->frame_id_<<" ,page_id:"<<page_id_<<" ,data:"<<frame_->data_.data()<< std::endl;
+  std::cout << "[read] frame_id:" <<frame_->frame_id_<<" ,page_id:"<<page_id_<<" ,data:"<<frame_->data_.data()<< std::endl;
   frame_->rwlatch_.lock_shared();
-  // frame_->pin_count_++;
+
+  frame_->pin_count_++;
   // replacer_->SetEvictable(frame_->frame_id_, false);
   // replacer_->RecordAccess(frame_->frame_id_);
+
+  
   is_valid_ = true;
 }
 
@@ -143,7 +146,7 @@ void ReadPageGuard::Drop() {
     is_valid_ = false;
     bpm_latch_ = nullptr;
     replacer_ = nullptr;
-    std::cout << "~ read: frame_id:" <<frame_->frame_id_<<" ,page_id"<<page_id_<< std::endl;
+    std::cout << "~ [read] frame_id:" <<frame_->frame_id_<<" ,page_id:"<<page_id_<< std::endl;
     frame_->rwlatch_.unlock_shared();
     frame_ = nullptr;
   }
@@ -173,11 +176,13 @@ ReadPageGuard::~ReadPageGuard() {
 WritePageGuard::WritePageGuard(page_id_t page_id, std::shared_ptr<FrameHeader> frame,
                                std::shared_ptr<LRUKReplacer> replacer, std::shared_ptr<std::mutex> bpm_latch)
     : page_id_(page_id), frame_(std::move(frame)), replacer_(std::move(replacer)), bpm_latch_(std::move(bpm_latch)) {
-  std::cout << "write: frame_id:" <<frame_->frame_id_<<" ,page_id"<<page_id_<<", data:"<<frame_->data_.data()<< std::endl;
+  std::cout << "[write] frame_id:" <<frame_->frame_id_<<" ,page_id:"<<page_id_<<", data:"<<frame_->data_.data()<< std::endl;
   frame_->rwlatch_.lock();
-  // frame_->pin_count_++;
+
+  frame_->pin_count_++;
   // replacer_->SetEvictable(frame_->frame_id_, false);
   // replacer_->RecordAccess(frame_->frame_id_);
+
   is_valid_ = true;
 
 }
@@ -205,7 +210,7 @@ void WritePageGuard::Drop() {
   is_valid_ = false;
   bpm_latch_ = nullptr;
   replacer_ = nullptr;
-  std::cout << "~ write: frame_id:" <<frame_->frame_id_<<" ,page_id"<<page_id_<< std::endl;
+  std::cout << "~ [write]: frame_id:" <<frame_->frame_id_<<" ,page_id:"<<page_id_<< std::endl;
   frame_->rwlatch_.unlock();
   frame_ = nullptr;
 }
