@@ -17,6 +17,7 @@
 
 #include "buffer/buffer_pool_manager.h"
 #include "storage/index/generic_key.h"
+#include "storage/page/page_guard.h"
 
 namespace bustub {
 
@@ -55,6 +56,8 @@ class BPlusTreePage {
   auto GetMaxSize() const -> int;
   void SetMaxSize(int max_size);
   auto GetMinSize() const -> int;
+
+  auto IsFull() const -> bool;
 
  private:
   // Member variables, attributes that both internal and leaf page share

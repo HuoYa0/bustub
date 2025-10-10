@@ -66,6 +66,7 @@ ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept
   that.is_valid_ = false;
   that.bpm_latch_ = nullptr;
   that.frame_ = nullptr;
+  that.page_id_ = INVALID_PAGE_ID;
   that.replacer_ = nullptr;
 }
 /**
@@ -139,6 +140,7 @@ auto ReadPageGuard::IsDirty() const -> bool {
  */
 void ReadPageGuard::Drop() {
   if (is_valid_) {
+    frame_->rwlatch_.unlock_shared();
     frame_->pin_count_--;
     if ((frame_->pin_count_) == 0) {
       replacer_->SetEvictable(frame_->frame_id_, true);
@@ -147,7 +149,6 @@ void ReadPageGuard::Drop() {
     bpm_latch_ = nullptr;
     replacer_ = nullptr;
     std::cout << "~ [read] frame_id:" <<frame_->frame_id_<<" ,page_id:"<<page_id_<< std::endl;
-    frame_->rwlatch_.unlock_shared();
     frame_ = nullptr;
   }
 }
@@ -202,6 +203,7 @@ void WritePageGuard::Drop() {
   if (!is_valid_) {
     return;
   }
+  frame_->rwlatch_.unlock();
   frame_->is_dirty_ = true;
   frame_->pin_count_--;
   if ((frame_->pin_count_) == 0) {
@@ -211,7 +213,6 @@ void WritePageGuard::Drop() {
   bpm_latch_ = nullptr;
   replacer_ = nullptr;
   std::cout << "~ [write]: frame_id:" <<frame_->frame_id_<<" ,page_id:"<<page_id_<< std::endl;
-  frame_->rwlatch_.unlock();
   frame_ = nullptr;
 }
 

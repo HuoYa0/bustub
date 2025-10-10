@@ -13,6 +13,7 @@
 #include <queue>
 #include <string>
 
+#include "common/config.h"
 #include "storage/page/b_plus_tree_page.h"
 
 namespace bustub {
@@ -80,13 +81,65 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto ValueAt(int index) const -> ValueType;
 
   /**
+   * @param index The index of the key to set.
+   * @param key The new value for Value
+   */
+  void SetValueAt(int index, const ValueType &value);
+
+  auto IsInsertSafe() const -> bool;
+
+  auto IsDeleteSafe() const -> bool;
+
+  /**
+   * @brief 插入一个key, value (有序)
+   * @return true: 成功插入; false: 节点已满，插入失败
+   */
+  auto InsertKeyValue(const KeyType &key, const ValueType &value, KeyComparator &comparator) -> bool;
+
+  /**
+   * @brief 在index的位置上插入一个key, value
+   */
+  void InsertKeyValueByIndex(const KeyType &key, const ValueType &value, int pos, KeyComparator &comparator);
+
+  /**
+   * @brief 插入数据key，value；this中key数量剩到min_size；other接收剩余的key
+   * （next_page_id的链接由上层完成）
+   * @return 返回上传的key（也就是第max/2 + 1个节点）
+   */
+  auto SplitInternalPage(BPlusTreeInternalPage &other, const KeyType &key, const ValueType &value,
+                         KeyComparator &comparator) -> KeyType;
+
+  /**
+   * @brief 寻找key所在的index (找到第一个小于等于key的位置，也就是search的位置)
+   * @return position
+   */
+  auto SearchKeyIndex(const KeyType &key, KeyComparator &comparator) const -> int;
+
+  /**
+   * @brief 大于一半，直接删除
+   * @return 删除是否成功
+   */
+  auto DeleteKey(const KeyType &key, KeyComparator &comparator, bool is_force) -> bool;
+
+  /**
+   * @brief 根据key的index删除，大于一半则删除
+   */
+  auto DeleteKeyByIndex(int key_index) -> bool;
+
+  void CombinePage(BPlusTreeInternalPage &other);
+
+  /**
    * @brief For test only, return a string representing all keys in
    * this internal page, formatted as "(key1,key2,key3,...)"
    *
    * @return The string representation of all keys in the current internal page
    */
   auto ToString() const -> std::string {
-    std::string kstr = "(";
+    std::string kstr;
+    if (GetSize() > 0) {
+      kstr.append(std::to_string(KeyAt(0).ToString()));
+    }
+    kstr.append("(");
     bool first = true;
 
     // First key of internal page is always invalid
